@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-set -e
+#!/bin/bash
 
 # SYNC_USER
 # SYNC_PASSWORD
@@ -33,12 +32,12 @@ existUID()
 {
     if [[ -z $SYNC_UID ]]; then
         return 0
-    else
-        if [[ -n $(getent passwd $SYNC_UID) ]]; then
-            user_wth_uid=$(getent passwd $SYNC_UID | cut -d : -f1)
-            echo "FATAL ERROR: User \"$user_wth_uid\" already have the UID \"$SYNC_UID\""
-            return 1
-        fi
+    fi
+
+    if [[ -n $(getent passwd $SYNC_UID) ]]; then
+        local existedUser=$(getent passwd $SYNC_UID | cut -d : -f1)
+        echo "FATAL ERROR: User \"$existedUser\" already have the UID \"$SYNC_UID\""
+        return 1
     fi
 
     return 0
@@ -46,10 +45,32 @@ existUID()
 
 existGroup()
 {
+    if [[ -z $SYNC_GROUP ]] && existUser; then
+        # Group name will be the same as username
+        return 0
+    fi
+
+    if [[ -n $SYNC_GROUP ]]; then
+        if [[ -n $(getent group $SYNC_GROUP) ]]; then
+            echo "FATAL ERROR: Group \"$SYNC_GROUP\" already exist in container"
+            return 1
+        fi
+    fi
+
     return 0
 }
 
 existGID()
 {
+     if [[ -z $SYNC_GID ]]; then
+        return 0
+    fi
+
+    if [[ -n $(getent group $SYNC_GID) ]]; then
+        local existedGroup=$(getent group $SYNC_GID | cut -d : -f1)
+        echo "FATAL ERROR: Group \"$existedGroup\" already have the GID \"$SYNC_GID\""
+        return 1
+    fi
+
     return 0
 }
