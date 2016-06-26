@@ -5,13 +5,12 @@
 # SYNC_UID
 # SYNC_GROUP
 # SYNC_GID
-# SYNC_SOURCE_DIR
-# SYNC_DESTINATION_DIR
+# SYNC_FOLDER
+# SYNC_MODE
 
 # docker run -v /path/in/home/folder:/tmp/some_dir
-        # -e SYNC_SOURCE_DIR="/tmp/some_dir"
-        # -e SYNC_DESTINATION_DIR="/var/www"
-        # -v /var/www
+        # -e SYNC_FOLDER="/var/www/some_dir"
+        # -v /var/www/some_dir
         
 existUser()
 {
@@ -45,7 +44,7 @@ existUID()
 
 existGroup()
 {
-    if [[ -z $SYNC_GROUP ]] && existUser; then
+    if [[ -z $SYNC_GROUP ]]; then
         # Group name will be the same as username
         return 0
     fi
@@ -73,4 +72,29 @@ existGID()
     fi
 
     return 0
+}
+
+nonRootFolder()
+{
+    if [[ -z $SYNC_FOLDER ]]; then
+        echo "FATAL ERROR: You must specify \"$SYNC_FOLDER\" environment variable"
+        return 1
+    fi
+
+    if [[ $(dirname $SYNC_FOLDER) == "/" || $(basename $SYNC_FOLDER) == "/" || pwd == "/" ]]; then
+        echo "FATAL ERROR: Root folder can not be home directory for user"
+        return 1
+    fi
+
+    return 0
+}
+
+allowSyncMode()
+{
+    if [[ $SYNC_MODE == "update" || $SYNC_MODE == "overwrite" ]]; then
+        return 0
+    fi
+
+    echo "FATAL ERROR: Environment variable \"SYNC_MODE\" can have only \"update\" or \"overwrite\" value"
+    return 1
 }

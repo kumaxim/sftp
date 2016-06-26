@@ -22,12 +22,14 @@ against()
     return $(assert $1 && echo 127 || echo 0)
 }
 
+# Print message about success. $1 is name test case
 successMessage()
 {
     echo "TEST: The function \"$1\" works correctly"
     return 0
 }
 
+# Print message about fail. $1 is name test case
 failMessage()
 {
     echo "TEST: The function \"$1\" returned with ERROR code"
@@ -88,7 +90,7 @@ testExistedUID()
 
 testNotExistedUID()
 {
-    local SYNC_UID=1011 # Random UID not existing with test container
+    local SYNC_UID=1011 # Random UID not existing with test image
     assert $(existUID > /dev/null; echo $?)
     return $?
 }
@@ -108,15 +110,9 @@ testUID()
 
 # === The group name test cases ===
 
-testNotSpecifyGroupAndUsername()
-{
-    assert $(existGroup > /dev/null; echo $?)
-    return $?
-}
-
 testNotSpecifyGroup()
 {
-    against $(existGroup > /dev/null; echo $?)
+    assert $(existGroup > /dev/null; echo $?)
     return $?
 }
 
@@ -137,10 +133,8 @@ testNotExistedGroup()
 testGroup()
 {
     unset SYNC_GROUP # Reset the tests variable
-    # Function "existGroup" calling the "existUser" function
-    local SYNC_USER="dockersyncer" # Testing with invalid username devoid of meaning
 
-    if testNotSpecifyGroupAndUsername && testNotSpecifyGroup && testExistedGroup && testNotExistedGroup; then
+    if testNotSpecifyGroup && testExistedGroup && testNotExistedGroup; then
         successMessage "existGroup"
         return $?
     fi
@@ -149,8 +143,135 @@ testGroup()
     return $?
 }
 
-# === Run all tests ===
+# === The GID test cases ===
 
-testUser
-testUID
-#testGroup
+testNotSpecifyGID()
+{
+    assert $(existGID > /dev/null; echo $?)
+    return $?
+}
+
+testExistedGID()
+{
+    local SYNC_GID="0" # GID is zero for the root user
+    against $(existGID > /dev/null; echo $?)
+    return $?
+}
+
+testNotExistedGID()
+{
+    local SYNC_GID="1011"  # Random GID not existing with test image
+    assert $(existGID > /dev/null; echo $?)
+    return $?
+}
+
+
+testGID()
+{
+    unset SYNC_GID # Reset the tests variable
+
+    if testNotSpecifyGID && testExistedGID && testNotExistedGID; then
+        successMessage "existGID"
+        return $?
+    fi
+
+    failMessage "existGID"
+    return $?
+}
+
+# === The sync mode test case
+
+testNotSpecifySyncMode()
+{
+    against $(allowSyncMode > /dev/null; echo $?)
+    return $?
+}
+
+testValidSyncMode()
+{
+    for mode in "update" "overwrite"; do
+        local SYNC_MODE=$mode
+        assert $(allowSyncMode > /dev/null; echo $?)
+
+        if [[ $? > 0 ]]; then
+            return 127
+        fi
+    done
+
+    return $?
+}
+
+testInvalidSyncMode()
+{
+    local SYNC_MODE="random_mode"
+
+    against $(allowSyncMode > /dev/null; echo $?)
+    return $?
+}
+
+
+testSyncMode()
+{
+    unset SYNC_MODE # Reset the tests variable
+
+    if testNotSpecifySyncMode && testInvalidSyncMode && testValidSyncMode; then
+        successMessage "allowSyncMode"
+        return $?
+    fi
+
+    failMessage "allowSyncMode"
+    return $?
+}
+
+# === The folder test cases ===
+
+testNotSpecifyFolder()
+{
+    against $(nonRootFolder > /dev/null; echo $?)
+    return $?
+}
+
+testRootFolder()
+{
+    for folder in "/" "/var" "/var/"; do
+        local SYNC_FOLDER=$folder
+        against $(nonRootFolder > /dev/null; echo $?)
+
+        if [[ $? > 0 ]]; then
+            return 127
+        fi
+    done
+    
+    return $?
+}
+
+testDeepFolder()
+{
+    local SYNC_FOLDER="/home/var/some_dir"
+
+    assert $(nonRootFolder > /dev/null; echo $?)
+    return $?
+}
+
+testSyncFolder()
+{
+    unset SYNC_FOLDER # Reset the tests variable
+
+    if testNotSpecifyFolder && testRootFolder && testDeepFolder; then
+        successMessage "testSyncFolder"
+        return $?
+    fi
+
+    failMessage "testSyncFolder"
+    return $?
+}
+
+# === Run all tests ===
+if testUser && testUID && testGroup && testGID && testSyncMode && testSyncFolder; then
+    echo "STATUS: All tests completed successfully"
+    exit 0
+fi
+
+echo "STATUS: One of tests completed failure"
+exit 1
+
