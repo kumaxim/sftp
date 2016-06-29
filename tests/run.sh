@@ -73,6 +73,71 @@ testUser()
     return $?
 }
 
+# === The user password test cases ===
+
+testUserPasswordNotSpecify()
+{
+    against $(userPassword > /dev/null; echo $?)
+    return $?
+}
+
+testUserPasswordExist()
+{
+    local USER_PASSWORD="password_phrase"
+    assert $(userPassword > /dev/null; echo $?)
+    return $?
+}
+
+testUserPassword()
+{
+    unset USER_PASSWORD # Reset the tests variable
+
+    if testUserPasswordNotSpecify && testUserPasswordExist; then
+        successMessage "userPassword"
+        return $?
+    fi
+
+    failMessage "userPassword"
+    return $?
+}
+
+# === The user home directory test cases ===
+
+testUserHomeDirNotSpecify()
+{
+    against $(userHomeDirNoRoot > /dev/null; echo $?)
+    return $?
+}
+
+testUserHomeDirIsRoot()
+{
+    local USER_HOME_DIRECTORY="/"
+    against $(userHomeDirNoRoot > /dev/null; echo $?)
+
+    return $?
+}
+
+testUserHomeDirInDeep()
+{
+    local USER_HOME_DIRECTORY="/home/var/some_dir"
+
+    assert $(userHomeDirNoRoot > /dev/null; echo $?)
+    return $?
+}
+
+testUserHomeDir()
+{
+    unset USER_HOME_DIRECTORY # Reset the tests variable
+
+    if testUserHomeDirNotSpecify && testUserHomeDirIsRoot && testUserHomeDirInDeep; then
+        successMessage "userHomeDirNoRoot"
+        return $?
+    fi
+
+    failMessage "userHomeDirNoRoot"
+    return $?
+}
+
 # === The UID test cases ===
 
 testNotSpecifyUID()
@@ -179,11 +244,50 @@ testGID()
     return $?
 }
 
-# === The sync mode test case
+# === The sync folder test cases
+
+testSyncFolderNotSpecify()
+{
+    against $(syncFolderInsideHomeDir > /dev/null; echo $?)
+    return $?
+}
+
+testSyncFolderOutsideUserHomeDirectory()
+{
+    local USER_HOME_DIRECTORY="/home/someUser"
+    local SYNC_FOLDER="/var/www/sync_some_data"
+
+    against $(syncFolderInsideHomeDir > /dev/null; echo $?)
+    return $?
+}
+
+testSyncFolderInsideUserHomeDirectory()
+{
+    local USER_HOME_DIRECTORY="/var/www"
+    local SYNC_FOLDER="/var/www/sync_some_data"
+
+    assert $(syncFolderInsideHomeDir > /dev/null; echo $?)
+    return $?
+}
+
+testSyncFolder()
+{
+    unset SYNC_FOLDER # Reset the tests variable
+
+    if testSyncFolderNotSpecify && testSyncFolderOutsideUserHomeDirectory && testSyncFolderInsideUserHomeDirectory; then
+        successMessage "syncFolderInsideHomeDir"
+        return $?
+    fi
+
+    failMessage "syncFolderInsideHomeDir"
+    return $?
+}
+
+# === The sync mode test cases
 
 testNotSpecifySyncMode()
 {
-    against $(allowSyncMode > /dev/null; echo $?)
+    assert $(allowSyncMode > /dev/null; echo $?)
     return $?
 }
 
@@ -225,49 +329,11 @@ testSyncMode()
 
 # === The folder test cases ===
 
-testNotSpecifyFolder()
-{
-    against $(nonRootFolder > /dev/null; echo $?)
-    return $?
-}
 
-testRootFolder()
-{
-    for folder in "/" "/var" "/var/"; do
-        local SYNC_FOLDER=$folder
-        against $(nonRootFolder > /dev/null; echo $?)
-
-        if [[ $? > 0 ]]; then
-            return 127
-        fi
-    done
-    
-    return $?
-}
-
-testDeepFolder()
-{
-    local SYNC_FOLDER="/home/var/some_dir"
-
-    assert $(nonRootFolder > /dev/null; echo $?)
-    return $?
-}
-
-testSyncFolder()
-{
-    unset SYNC_FOLDER # Reset the tests variable
-
-    if testNotSpecifyFolder && testRootFolder && testDeepFolder; then
-        successMessage "testSyncFolder"
-        return $?
-    fi
-
-    failMessage "testSyncFolder"
-    return $?
-}
 
 # === Run all tests ===
-if testUser && testUID && testGroup && testGID && testSyncMode && testSyncFolder; then
+if testUser && testUserPassword && testUserHomeDir && testUID && testGroup && testGID && 
+    testSyncFolder && testSyncMode; then
     echo "STATUS: All tests completed successfully"
     exit 0
 fi

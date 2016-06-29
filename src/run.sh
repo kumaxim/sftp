@@ -6,4 +6,13 @@ if [[ -n $SYNC_INIT ]]; then
 	exit 0
 fi
 
+# SYNC_USER
+# USER_PASSWORD
+# USER_HOME_DIRECTORY
+# SYNC_UID
+# SYNC_GROUP
+# SYNC_GID
+# SYNC_FOLDER
+# SYNC_MODE
+
 . "$(pwd)/function.sh"

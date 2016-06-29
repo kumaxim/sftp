@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # SYNC_USER
-# SYNC_PASSWORD
 # SYNC_UID
+# USER_PASSWORD
+# USER_HOME_DIRECTORY
 # SYNC_GROUP
 # SYNC_GID
 # SYNC_FOLDER
@@ -27,6 +28,33 @@ existUser()
     return 0
 }
 
+userPassword()
+{
+    if [[ -z $USER_PASSWORD ]]; then
+        echo "FATAL ERROR: You must specify \"USER_PASSWORD\" environment variable"
+        return 1
+    fi
+
+    # TODO: add validating rules in v.2
+
+    return 0
+}
+
+userHomeDirNoRoot()
+{
+    if [[ -z $USER_HOME_DIRECTORY ]]; then
+        echo "FATAL ERROR: You must specify \"USER_HOME_DIRECTORY\" environment variable"
+        return 1
+    fi
+
+    if [[ $USER_HOME_DIRECTORY == "/" ]]; then
+        echo "FATAL ERROR: User home directory can not be the root"
+        return 1
+    fi
+
+    return 0
+}
+
 existUID()
 {
     if [[ -z $SYNC_UID ]]; then
@@ -35,7 +63,7 @@ existUID()
 
     if [[ -n $(getent passwd $SYNC_UID) ]]; then
         local existedUser=$(getent passwd $SYNC_UID | cut -d : -f1)
-        echo "FATAL ERROR: User \"$existedUser\" already have the UID \"$SYNC_UID\""
+        echo "FATAL ERROR: User \"$existedUser\" already have the SYNC_UID \"$SYNC_UID\""
         return 1
     fi
 
@@ -45,7 +73,7 @@ existUID()
 existGroup()
 {
     if [[ -z $SYNC_GROUP ]]; then
-        # Group name will be the same as username
+        # SYNC_GROUP name will be the same as SYNC_USERname
         return 0
     fi
 
@@ -67,31 +95,33 @@ existGID()
 
     if [[ -n $(getent group $SYNC_GID) ]]; then
         local existedGroup=$(getent group $SYNC_GID | cut -d : -f1)
-        echo "FATAL ERROR: Group \"$existedGroup\" already have the GID \"$SYNC_GID\""
+        echo "FATAL ERROR: Group \"$existedGroup\" already have the SYNC_GID \"$SYNC_GID\""
         return 1
     fi
 
     return 0
 }
 
-nonRootFolder()
+syncFolderInsideHomeDir()
 {
     if [[ -z $SYNC_FOLDER ]]; then
-        echo "FATAL ERROR: You must specify \"$SYNC_FOLDER\" environment variable"
+        echo "FATAL ERROR: You must specify \"SYNC_FOLDER\" environment variable"
         return 1
     fi
 
-    if [[ $(dirname $SYNC_FOLDER) == "/" || $(basename $SYNC_FOLDER) == "/" || pwd == "/" ]]; then
-        echo "FATAL ERROR: Root folder can not be home directory for user"
-        return 1
+    if [[ $(dirname $SYNC_FOLDER) == $USER_HOME_DIRECTORY ]]; then
+        
+        return 0
     fi
 
-    return 0
+    echo "FATAL ERROR: Forlder for synchronization must be place inside \"$USER_HOME_DIRECTORY\""
+    return 1
 }
 
 allowSyncMode()
 {
-    if [[ $SYNC_MODE == "update" || $SYNC_MODE == "overwrite" ]]; then
+    # Variable can be empty. This means than will use update mode
+    if [[ -z $SYNC_MODE || $SYNC_MODE == "update" || $SYNC_MODE == "overwrite" ]]; then
         return 0
     fi
 
